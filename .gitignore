@@ -1,0 +1,46 @@
+# Archivos y directorios generados por el compilador (GCC, Clang, etc.)
+#####################################################################
+*.o        # Archivos objeto
+*.obj
+*.so       # Librerías compartidas dinámicas
+*.dll      # Librerías de Windows
+*.a        # Librerías estáticas
+*.out      # Salida por defecto de GCC/Clang (e.g., a.out)
+*.exe      # Ejecutables de Windows
+*.app      # Ejecutables de macOS/iOS
+*.dylib    # Librerías dinámicas de macOS
+
+# Logs y archivos de depuración
+#####################################################################
+*.log
+*.map
+*.bak
+*.swp      # Archivos de swap de VIM
+
+# Archivos de proyectos de IDEs comunes (VS Code, Visual Studio, etc.)
+#####################################################################
+.vscode/
+.idea/
+*.suo
+*.user
+*.ncb
+*.aps
+*.plg
+
+# Dependencias (si se usan gestores como Conan, vcpkg, etc.)
+#####################################################################
+/build/
+/bin/
+/lib/
+/tmp/
+
+# Archivos del proyecto específico (basado en el código proporcionado)
+#####################################################################
+
+# Si tu compilador genera un ejecutable con un nombre específico (ejemplo: duckhunt.exe o duckhunt)
+duckhunt
+duckhunt.exe
+
+# Si alguna de tus librerías genera archivos temporales o de configuración
+# simplecontroller.config
+# graficos.cache
