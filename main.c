@@ -1,17 +1,15 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
+#include <time.h>
 #define MAX_PATOS 3
 #include "graficos.h"
 #include "simplecontroller.h"
-#define GRAVEDAD 1
+
 #define JX 15
 #define JY 2
 #define BTN 4
 #define MTR 13
-
-#define AJUSTE_X 0.51
-#define AJUSTE_Y 0.4
-
 
 typedef struct {
     int x, y;
@@ -22,6 +20,7 @@ typedef struct {
     int direccion;
     int frame;
 } Pato;
+
 Pato patos[MAX_PATOS];
 
 typedef struct {
@@ -45,23 +44,52 @@ void actualizarMira(Mira *m, Board *esp32);
 void verificarColisiones(Mira *m, Pato *patos, int num_patos);
 bool colisionMiraPato(Mira *m, Pato *p);
 void actualizarPato(Pato *p);
-//void subirNivel(EstadoJuego *juego);
 
 int main() {
-    Board *esp32 = connectDevice("COM6", B115200);
+    srand(time(NULL));
 
+    printf("Inicializando ventana...\n");
+    ventana.tamanioVentana(800, 600);
+    ventana.tituloVentana("Duck Hunt");
+    printf("Ventana creada correctamente\n");
+
+    printf("Conectando a ESP32...\n");
+    Board *esp32 = connectDevice("COM6", B115200);
+    if (esp32 == NULL) {
+        printf("Error: No se pudo conectar al dispositivo en COM6\n");
+        printf("Verifica que el ESP32 esté conectado y el puerto sea correcto\n");
+        ventana.cierraVentana();
+        return -1;
+    }
+    printf("ESP32 conectado correctamente\n");
+
+    printf("Cargando imágenes...\n");
     Imagen *pato_img[2];
     pato_img[0] = ventana.creaImagenConMascara("Imagenes/pato_1.bmp", "Imagenes/mascara_pato_1.bmp");
-    pato_img[1] = ventana.creaImagenConMascara("Imagenes/pato_2.bmp", "pato2_mask.bmp");
+    pato_img[1] = ventana.creaImagenConMascara("Imagenes/pato_2.bmp", "Imagenes/mascara_pato_2.bmp");
     Imagen *pato_muerto = ventana.creaImagenConMascara("Imagenes/pato_muerto.bmp", "Imagenes/mascara_pato_muerto.bmp");
     Imagen *mira_img = ventana.creaImagenConMascara("Imagenes/mira.bmp", "Imagenes/mascara_mira.bmp");
     Imagen *fondo = ventana.creaImagen("Imagenes/fondo.bmp");
 
+    if (!pato_img[0] || !pato_img[1] || !pato_muerto || !mira_img || !fondo) {
+        printf("Error: No se pudieron cargar todas las imágenes\n");
+        printf("Verifica que la carpeta 'Imagenes' exista y contenga todos los archivos:\n");
+        printf("  - pato_1.bmp y mascara_pato_1.bmp\n");
+        printf("  - pato_2.bmp y mascara_pato_2.bmp\n");
+        printf("  - pato_muerto.bmp y mascara_pato_muerto.bmp\n");
+        printf("  - mira.bmp y mascara_mira.bmp\n");
+        printf("  - fondo.bmp\n");
+        if (esp32) esp32->closeDevice(esp32);
+        ventana.cierraVentana();
+        return -1;
+    }
+    printf("Imágenes cargadas correctamente\n");
+
+    // Configurar pines del ESP32
     esp32->pinMode(esp32, JX, INPUT);
     esp32->pinMode(esp32, JY, INPUT);
     esp32->pinMode(esp32, BTN, INPUT_PULLUP);
     esp32->pinMode(esp32, MTR, OUTPUT);
-
 
     EstadoJuego juego = {0, 0, 1, 0, true, 1};
     Mira mira = {400, 300, false, 3, 0};
@@ -70,8 +98,7 @@ int main() {
         inicializarPato(&patos[i], juego.nivel);
     }
 
-    ventana.tamanioVentana(800, 600);
-    ventana.tituloVentana("Duck Hunt");
+    printf("Juego iniciado. Presiona ESC para salir.\n");
 
     int tecla = TECLAS.NINGUNA;
 
@@ -129,7 +156,7 @@ int main() {
         ventana.espera(16);
     }
 
-
+    printf("Cerrando juego...\n");
     ventana.eliminaImagen(pato_img[0]);
     ventana.eliminaImagen(pato_img[1]);
     ventana.eliminaImagen(pato_muerto);
@@ -138,6 +165,7 @@ int main() {
     esp32->closeDevice(esp32);
     ventana.cierraVentana();
 
+    printf("Juego cerrado. Puntos finales: %d\n", juego.puntos);
     return 0;
 }
 
@@ -179,6 +207,7 @@ void actualizarPato(Pato *p) {
 
     p->frame = (p->frame + 1) % 20;
 }
+
 void actualizarMira(Mira *m, Board *esp32) {
     float jx = esp32->analogRead(esp32, JX);
     float jy = esp32->analogRead(esp32, JY);
@@ -237,22 +266,3 @@ void verificarColisiones(Mira *m, Pato *patos, int num_patos) {
         }
     }
 }
-
-/*void subirNivel(EstadoJuego *juego) {
-    juego->nivel++;
-    if (juego->nivel % 3 == 0) {
-        MAX_PATOS++;
-    }
-}
-
-
-/*void vueloSinusoidal(Pato *p, int tiempo){
-    p->y = p->y_inicial + sin(tiempo * 0.1) * 50;
-}
-
-void vuelo8(Pato *p, int tiempo){
-    float t = tiempo * 0.05;
-    p->x = centro_x + cos(t) * radio;
-    p->y = centro_y + sin(2*t) * radio;
-}
-*/
