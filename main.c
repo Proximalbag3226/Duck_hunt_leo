@@ -47,12 +47,13 @@ typedef struct {
 
 void inicializarPato(Pato *p, int nivel);
 void actualizarPato(Pato *p);
-void actualizarMira(Mira *m, Board *esp32);
-void verificarColisiones(Mira *m, Pato *patos, int num_patos);
+void actualizarMira(Mira *m, Board *esp32, EstadoJuego *juego);
+void verificarColisiones(Mira *m, Pato *patos, int num_patos, EstadoJuego *juego);
 bool colisionMiraPato(Mira *m, Pato *p);
 void dibujarFondoAjustado(Imagen *img);
-void dibujarEscalado(int x, int y, Imagen *img, int ancho, int alto); 
+void dibujarEscalado(int x, int y, Imagen *img, int ancho, int alto);
 void vueloSinusoidal(Pato *p, int tiempo);
+void sumarPuntos(EstadoJuego *juego, int puntosextra);
 
 int main() {
     srand(time(NULL));
@@ -73,8 +74,6 @@ int main() {
          printf("Error al cargar imgenes de patos o de mira""\n");
     }
 
-
-    /*DESCOMENTAR ESTO CUANDO SE ESTE UTILIZANDO EL SP32
     printf("Conectando a arduino\n");
     Board *esp32 = connectDevice("COM6", B115200);
     if (esp32 != NULL) {
@@ -82,7 +81,6 @@ int main() {
         esp32->pinMode(esp32, JY, INPUT);
         esp32->pinMode(esp32, BTN, INPUT_PULLUP);
         esp32->pinMode(esp32, MTR, OUTPUT);
-        // Descartar lecturas iniciales
         for(int i=0; i<10; i++) {
             esp32->analogRead(esp32, JX);
             ventana.espera(10);
@@ -90,8 +88,6 @@ int main() {
     } else {
         printf("Jugando en teclado\n");
     }
-    */
-    Board *esp32 = NULL;
 
     EstadoJuego juego = {0, 0, 1, 0, true, 1};
     Mira mira = {ventana.anchoVentana()/2, ventana.altoVentana()/2, false, 3, 0};
@@ -106,7 +102,7 @@ int main() {
         tecla = ventana.teclaPresionada();
 
         if (esp32 != NULL) {
-            actualizarMira(&mira, esp32);
+            actualizarMira(&mira, esp32, &juego);
         } else {
             if(tecla == TECLAS.DERECHA) mira.x += 10;
             if(tecla == TECLAS.IZQUIERDA) mira.x -= 10;
@@ -117,7 +113,7 @@ int main() {
                  mira.disparando = true;
                  mira.balas--;
                  mira.tiempo_disparo = 10;
-                 verificarColisiones(&mira, patos, MAX_PATOS);
+                 verificarColisiones(&mira, patos, MAX_PATOS, &juego);
             } else if (tecla != TECLAS.ESPACIO) {
                  mira.disparando = false;
             }
@@ -184,6 +180,14 @@ int main() {
     return 0;
 }
 
+void sumarPuntos(EstadoJuego *juego, int puntosextra) {
+    juego->puntos +=puntosextra;
+    juego->patos_cazados++;
+    if (juego->patos_cazados % 10 == 0) {
+        juego->patos_cazados+=1000;
+    }
+}
+
 void dibujarEscalado(int x, int y, Imagen *img, int ancho, int alto) {
     if (img != NULL) {
         ventana.muestraImagenEscalada(x, y, ancho, alto, img);
@@ -233,14 +237,14 @@ void actualizarPato(Pato *p) {
     }
 
     if (!p->volando) return;
-    
+
     p->x += p->velocidad_x;
     p->y += p->velocidad_y;
 
     if (p->y < 0 || p->y > h - 150) {
         p->velocidad_y = -p->velocidad_y;
     }
-    
+
     if (p->x < -PATO_ANCHO - 50 || p->x > w + 50) {
         p->volando = false;
     }
@@ -248,7 +252,7 @@ void actualizarPato(Pato *p) {
     p->frame = (p->frame + 1) % 20;
 }
 
-void actualizarMira(Mira *m, Board *esp32) {
+void actualizarMira(Mira *m, Board *esp32, EstadoJuego *juego) {
     if (esp32 == NULL) return;
 
     float jx = esp32->analogRead(esp32, JX);
@@ -273,7 +277,7 @@ void actualizarMira(Mira *m, Board *esp32) {
         m->tiempo_disparo = 10;
         esp32->digitalWrite(esp32, MTR, true);
 
-        verificarColisiones(m, patos, MAX_PATOS);
+        verificarColisiones(m, patos, MAX_PATOS, juego);
     }
     else if (btn) {
         m->disparando = false;
@@ -281,10 +285,11 @@ void actualizarMira(Mira *m, Board *esp32) {
     }
 }
 
-void verificarColisiones(Mira *m, Pato *patos, int num_patos) {
+void verificarColisiones(Mira *m, Pato *patos, int num_patos, EstadoJuego *juego) {
     for (int i = 0; i < num_patos; i++) {
         if (colisionMiraPato(m, &patos[i])) {
             patos[i].vivo = false;
+            sumarPuntos(juego, 100);
         }
     }
 }
@@ -306,3 +311,4 @@ bool colisionMiraPato(Mira *m, Pato *p) {
 
     return distancia_sq < (suma_radios * suma_radios);
 }
+
