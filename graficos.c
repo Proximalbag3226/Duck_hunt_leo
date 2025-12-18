@@ -749,7 +749,7 @@ Imagen *creaImagenConMascara(const char *ruta, const char *ruta_mask)
     if (image->hBitmap == NULL || image->hBitmap_mask == NULL)
     {
         free(image);
-        image = NULL;
+        return NULL;
     }
     GetObject(image->hBitmap, sizeof(bitmap), &bitmap);
     image->ancho = bitmap.bmWidth;
